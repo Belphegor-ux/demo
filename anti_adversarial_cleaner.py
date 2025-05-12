@@ -1,25 +1,48 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon May 12 17:53:04 2025
-
-@author: USER
-"""
-
 import os
+import shutil
+import json
+import datetime
 
-DISTORTED_DIR = 'distorted_files'
+ORIGINAL_DIR = 'original_files'
+RECOVERED_DIR = 'recovered_files'
+LOG_FILE = 'recovery_log.json'
+os.makedirs(RECOVERED_DIR, exist_ok=True)
 
-def cleanup():
+recovery_log = []
+
+def log_recovery(file, file_type):
+    recovery_log.append({
+        "filename": file,
+        "action": "recovered",
+        "file_type": file_type,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
+
+def get_file_type(file):
+    if file.endswith(('.png', '.jpg', '.jpeg')):
+        return 'image'
+    elif file.endswith('.txt'):
+        return 'text'
+    elif file.endswith('.pdf'):
+        return 'pdf'
+    return 'unknown'
+
+def recover_files():
     count = 0
-    for file in os.listdir(DISTORTED_DIR):
-        if file.startswith('distorted_'):
-            os.remove(os.path.join(DISTORTED_DIR, file))
-            count += 1
-    print(f"Clean-up complete. {count} distorted files removed.")
+    for filename in os.listdir(ORIGINAL_DIR):
+        src = os.path.join(ORIGINAL_DIR, filename)
+        dst = os.path.join(RECOVERED_DIR, f"recovered_{filename}")
+        shutil.copy2(src, dst)
+        log_recovery(filename, get_file_type(filename))
+        count += 1
+    with open(LOG_FILE, 'w') as f:
+        json.dump(recovery_log, f, indent=2)
+    print(f" Recovery log saved to: {LOG_FILE}")
+    print(f" {count} files recovered to '{RECOVERED_DIR}'")
 
 if __name__ == "__main__":
-    confirm = input("Are you sure you want to remove all distorted files? (yes/no): ").strip().lower()
+    confirm = input("Recover original versions? (yes/no): ").strip().lower()
     if confirm == 'yes':
-        cleanup()
+        recover_files()
     else:
-        print("Clean-up aborted.")
+        print("Recovery aborted.")
